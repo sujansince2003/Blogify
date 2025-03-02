@@ -1,107 +1,147 @@
-import { Hono } from 'hono'
-import { getPrisma } from '../lib/prisma'
-import { decode, sign, verify } from 'hono/jwt'
-import { z } from "zod"
-
+import { Hono } from "hono";
+import { getPrisma } from "../lib/prisma";
+import { decode, jwt, sign, verify } from "hono/jwt";
+import { z } from "zod";
+import { createMiddleware } from "hono/factory";
+import bcrypt from "bcryptjs";
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
 
   password: z.string().min(6, "password must be at least 6 character long"),
-  email: z.string().email("email format didnot match")
-})
+  email: z.string().email("email format didnot match"),
+});
 
-export const loginSchema = z.object({
-  password: z.string().min(6, "Password must be at least 6 characters"),
-}).and(
-  z.union([
-    z.object({ email: z.string().email("Invalid email") }),  // Login with email
-    z.object({ username: z.string().min(3, "Username must be at least 3 characters") }) // Login with username
-  ])
-)
-import bcrypt from 'bcryptjs'
+export const loginSchema = z
+  .object({
+    password: z.string().min(6, "Password must be at least 6 characters"),
+  })
+  .and(
+    z.union([
+      z.object({ email: z.string().email("Invalid email") }), // Login with email
+      z.object({
+        username: z.string().min(3, "Username must be at least 3 characters"),
+      }), // Login with username
+    ])
+  );
 
 const app = new Hono<{
   Bindings: {
-    DATABASE_URL: string,
-    JWT_SECRET: string
+    DATABASE_URL: string;
+    JWT_SECRET: string;
   }
-}>()
+  Variables:
+  {
+    userID: string
+  }
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
+
+}>();
+
+//defining middleware
+
+const authMiddleware = createMiddleware(async (c, next) => {
+  try {
+    let authToken = c.req.header("Authorization");
+    if (!authToken) {
+      return c.json({ msg: "Token not provided" });
+    }
+
+    const token =
+      authToken.length > 1 && authToken.startsWith("Bearer")
+        ? authToken.split(" ")[1]
+        : authToken;
+
+    const isValidToken = await verify(token, c.env.JWT_SECRET);
+    if (!isValidToken) {
+      return c.json({ msg: "Invalid Token or expired token" });
+    }
+    c.set("userID", isValidToken?.id);
+    await next();
+  } catch (error) {
+    console.error("Error occured in middleware");
+    return c.json({ msg: "Error in the middleware", error });
+  }
+});
+
+app.get("/", async (c) => {
+  c.text("hello")
 })
-
 app.post("/api/v1/user/signup", async (c) => {
-  const { email, username, password } = await c.req.json()
+  const { email, username, password } = await c.req.json();
 
-  const validateInput = registerSchema.safeParse({ email, username, password })
+  const validateInput = registerSchema.safeParse({ email, username, password });
   if (!validateInput.success) {
-    return c.json({ msg: "Validation failed", errors: validateInput.error.format() }, 400)
+    return c.json(
+      { msg: "Validation failed", errors: validateInput.error.format() },
+      400
+    );
   }
 
-  const prisma = getPrisma(c.env.DATABASE_URL)
+  const prisma = getPrisma(c.env.DATABASE_URL);
   const userExists = await prisma.user.findUnique({
     where: {
-      email
-    }
-  })
+      email,
+    },
+  });
   if (userExists) {
-    return c.json({ error: "User already exists" }, 400)
+    return c.json({ error: "User already exists" }, 400);
   }
-  const hashedPassword = await bcrypt.hash(password, 10)
+  const hashedPassword = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data:
+    data: {
+      email,
+      username,
+      password: hashedPassword,
+    },
+  });
+  const token = await sign(
     {
-      email, username, password: hashedPassword
-    }
-  })
-  const token = await sign({
-    id: user.id,
-    email: user.email,
-    exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
-  }, c.env.JWT_SECRET)
+      id: user.id,
+      email: user.email,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+    },
+    c.env.JWT_SECRET
+  );
 
-
-  return c.json({ token: token, user })
-
-})
+  return c.json({ token: token, user });
+});
 app.post("/api/v1/user/signin", async (c) => {
-
-  const body = await c.req.json()
-  const validateInput = loginSchema.safeParse(body)
+  const body = await c.req.json();
+  const validateInput = loginSchema.safeParse(body);
   if (!validateInput.success) {
-    return c.json({ msg: "Validation failed", errors: validateInput.error.format() }, 400)
+    return c.json(
+      { msg: "Validation failed", errors: validateInput.error.format() },
+      400
+    );
   }
-  const { username, email, password } = body
-  const prisma = getPrisma(c.env.DATABASE_URL)
+  const { username, email, password } = body;
+  const prisma = getPrisma(c.env.DATABASE_URL);
   const user = await prisma.user.findFirst({
-    where:
-    {
-      OR: [{ username }, { email }]
-    }
-  })
+    where: {
+      OR: [{ username }, { email }],
+    },
+  });
   if (!user) {
-    return c.json({ msg: "user not found" }, 400)
+    return c.json({ msg: "user not found" }, 400);
   }
-  const validatePassword = await bcrypt.compare(password, user.password)
+  const validatePassword = await bcrypt.compare(password, user.password);
   if (!validatePassword) {
-    return c.json({ msg: "password incorrect" })
+    return c.json({ msg: "password incorrect" });
   }
-  const token = await sign({ id: user.id }, c.env.JWT_SECRET)
-  return c.json({ msg: "login successful", token }, 200)
-})
+  const token = await sign({ id: user.id }, c.env.JWT_SECRET);
+  return c.json({ msg: "login successful", token }, 200);
+});
 app.post("/api/v1/blog", (c) => {
-  return c.text('Hello Hono!')
-})
+  return c.text("Hello Hono!");
+});
 app.put("/api/v1/blog", (c) => {
-  return c.text('Hello Hono!')
-})
+  return c.text("Hello Hono!");
+});
 app.get("/api/v1/blog/:id", (c) => {
-  return c.text('Hello Hono!')
-})
+  return c.text("Hello Hono!");
+});
 app.get("/api/v1/blog/bulk", (c) => {
-  return c.text('Hello Hono!')
-})
+  return c.text("Hello Hono!");
+});
 
-
-export default app
+export default app;
