@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getPrisma } from "../lib/prisma";
 import { sign, verify } from "hono/jwt";
-import { z } from "zod";
+import { registerSchema, loginSchema, blogBodySchema } from "@sujansince2003/blogifycommon"
 import { createMiddleware } from "hono/factory";
 import bcrypt from "bcryptjs";
 
@@ -15,24 +15,6 @@ const app = new Hono<{
   };
 }>();
 
-const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "password must be at least 6 character long"),
-  email: z.string().email("email format didnot match"),
-});
-
-const loginSchema = z
-  .object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
-  })
-  .and(
-    z.union([
-      z.object({ email: z.string().email("Invalid email") }), // Login with email
-      z.object({
-        username: z.string().min(3, "Username must be at least 3 characters"),
-      }), // Login with username
-    ])
-  );
 
 //defining authmiddleware
 
@@ -142,11 +124,7 @@ app.post("/api/v1/user/signin", async (c) => {
   return c.json({ msg: "login successful", token }, 200);
 });
 
-const blogBodySchema = z.object({
-  title: z.string().min(1),
-  content: z.string(),
-  isPublished: z.boolean().optional(),
-});
+
 
 //post the blog
 app.post("/api/v1/blog", authMiddleware, async (c) => {
