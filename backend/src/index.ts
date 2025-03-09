@@ -5,6 +5,7 @@ import { registerSchema, loginSchema, blogBodySchema } from "@sujansince2003/blo
 import { createMiddleware } from "hono/factory";
 import bcrypt from "bcryptjs";
 import { cors } from 'hono/cors'
+import { tuple } from "zod";
 
 const app = new Hono<{
   Bindings: {
@@ -27,10 +28,7 @@ app.use('*', (c, next) => {
     credentials: true,
   })
   return corsMiddleware(c, next)
-}
-
-
-)
+})
 
 app.options('*', (c) => {
   return c.text("option request handler")
@@ -62,22 +60,22 @@ const authMiddleware = createMiddleware(async (c, next) => {
   }
 });
 
-app.get("/", authMiddleware, async (c) => {
-  const prisma = getPrisma(c.env.DATABASE_URL);
-  const user = await prisma.user.findFirst({
-    where: {
-      id: c.get("userID"),
-    },
-    include: {
-      blogs: true,
-    },
-  });
-  if (!user) {
-    return c.json({ msg: "user not found!!!" });
-  }
+// app.get("/", authMiddleware, async (c) => {
+//   const prisma = getPrisma(c.env.DATABASE_URL);
+//   const user = await prisma.user.findFirst({
+//     where: {
+//       id: c.get("userID"),
+//     },
+//     include: {
+//       blogs: true,
+//     },
+//   });
+//   if (!user) {
+//     return c.json({ msg: "user not found!!!" });
+//   }
 
-  return c.json({ msg: "User found", user }, 200);
-});
+//   return c.json({ msg: "User found", user }, 200);
+// });
 app.post("/api/v1/user/signup", async (c) => {
   const { email, username, password } = await c.req.json();
 
@@ -230,9 +228,20 @@ app.get("/api/v1/blog/:id", authMiddleware, async (c) => {
   }
   return c.json({ msg: "successfully fetched", blogExist });
 });
-app.get("/api/v1/blog/bulk", async (c) => {
+
+app.get("/api/v1/blogs", async (c) => {
   const prisma = getPrisma(c.env.DATABASE_URL);
-  const blogs = await prisma.blog.findMany();
+  const blogs = await prisma.blog.findMany({
+    include: {
+      user: {
+        select:
+        {
+          id: true,
+          username: true,
+        }
+      }
+    }
+  });
   return c.json({ msg: "fetched all blogs", blogs });
 });
 
