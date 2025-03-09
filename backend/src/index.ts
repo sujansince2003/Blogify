@@ -4,20 +4,40 @@ import { sign, verify } from "hono/jwt";
 import { registerSchema, loginSchema, blogBodySchema } from "@sujansince2003/blogifycommon"
 import { createMiddleware } from "hono/factory";
 import bcrypt from "bcryptjs";
+import { cors } from 'hono/cors'
 
 const app = new Hono<{
   Bindings: {
     DATABASE_URL: string;
     JWT_SECRET: string;
+    ORIGIN_URL: string;
   };
   Variables: {
     userID: string;
   };
 }>();
 
+app.use('*', (c, next) => {
+  const corsMiddleware = cors({
+    origin: c.env.ORIGIN_URL,
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['POST', 'GET', 'OPTIONS'],
+    exposeHeaders: ['Content-Length'],
+    maxAge: 600,
+    credentials: true,
+  })
+  return corsMiddleware(c, next)
+}
+
+
+)
+
+app.options('*', (c) => {
+  return c.text("option request handler")
+})
+
 
 //defining authmiddleware
-
 const authMiddleware = createMiddleware(async (c, next) => {
   try {
     let authToken = c.req.header("Authorization");
@@ -58,7 +78,7 @@ app.get("/", authMiddleware, async (c) => {
 
   return c.json({ msg: "User found", user }, 200);
 });
-app.post("/api/v1/user/signup", authMiddleware, async (c) => {
+app.post("/api/v1/user/signup", async (c) => {
   const { email, username, password } = await c.req.json();
 
   const validateInput = registerSchema.safeParse({ email, username, password });
