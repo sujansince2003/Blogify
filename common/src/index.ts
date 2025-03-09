@@ -21,6 +21,7 @@ export const blogBodySchema = z.object({
     title: z.string().min(1),
     content: z.string(),
     isPublished: z.boolean().optional(),
+    createdAt: z.date()
 });
 
 export type signupType = z.infer<typeof registerSchema>
