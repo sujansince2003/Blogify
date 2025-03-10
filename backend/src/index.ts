@@ -220,17 +220,32 @@ app.delete("/api/v1/blog", authMiddleware, async (c) => {
   });
   return c.json({ msg: "delete successfully" }, 200);
 });
-app.get("/api/v1/blog/:id", authMiddleware, async (c) => {
+app.get("/api/v1/blog/:id", async (c) => {
   const blogId = c.req.param("id");
   const prisma = getPrisma(c.env.DATABASE_URL);
 
-  const blogExist = await prisma.blog.findUnique(blogId);
+  const blogExist = await prisma.blog.findFirst({
+    where: {
+      id: blogId
+    },
+    include:
+    {
+      user:
+      {
+        select:
+        {
+          username: true,
+          userAvatarUrl: true,
+
+
+        }
+      }
+    }
+  })
   if (!blogExist) {
     return c.json({ msg: "blog dont exist" });
   }
-  if (blogExist.userId !== c.get("userID")) {
-    return c.json({ msg: "you are not allowed" });
-  }
+
   return c.json({ msg: "successfully fetched", blogExist });
 });
 
