@@ -5,7 +5,7 @@ import { registerSchema, loginSchema, blogBodySchema } from "@sujansince2003/blo
 import { createMiddleware } from "hono/factory";
 import bcrypt from "bcryptjs";
 import { cors } from 'hono/cors'
-import { tuple } from "zod";
+
 
 const app = new Hono<{
   Bindings: {
@@ -60,48 +60,52 @@ const authMiddleware = createMiddleware(async (c, next) => {
   }
 });
 
-// app.get("/", authMiddleware, async (c) => {
-//   const prisma = getPrisma(c.env.DATABASE_URL);
-//   const user = await prisma.user.findFirst({
-//     where: {
-//       id: c.get("userID"),
-//     },
-//     include: {
-//       blogs: true,
-//     },
-//   });
-//   if (!user) {
-//     return c.json({ msg: "user not found!!!" });
-//   }
 
-//   return c.json({ msg: "User found", user }, 200);
-// });
+
+app.get("/api/v1/user", authMiddleware, async (c) => {
+  const userId = c.get("userID")
+  const prisma = getPrisma(c.env.DATABASE_URL)
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId
+      }
+    })
+    return c.json(user)
+  } catch (error) {
+    return c.json({ msg: "failed to get userdata" })
+  }
+
+})
+
 app.post("/api/v1/user/signup", async (c) => {
-  const { email, username, password } = await c.req.json();
+  const body = await c.req.json();
 
-  const validateInput = registerSchema.safeParse({ email, username, password });
+  const validateInput = registerSchema.safeParse(body);
   if (!validateInput.success) {
     return c.json(
       { msg: "Validation failed", errors: validateInput.error.format() },
       400
     );
   }
+  const userData = validateInput.data
 
   const prisma = getPrisma(c.env.DATABASE_URL);
   const userExists = await prisma.user.findUnique({
     where: {
-      email,
+      email: userData.email
     },
   });
   if (userExists) {
     return c.json({ error: "User already exists" }, 400);
   }
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(userData.password, 10);
   const user = await prisma.user.create({
     data: {
-      email,
-      username,
-      password: hashedPassword,
+      userAvatarUrl: userData?.userAvatarUrl || "",
+      email: userData.email,
+      username: userData.username,
+      password: hashedPassword
     },
   });
   const token = await sign(
@@ -149,13 +153,14 @@ app.post("/api/v1/blog", authMiddleware, async (c) => {
   const blogBody = await c.req.json();
   const isValid = blogBodySchema.safeParse(blogBody);
   if (!isValid.success) {
-    return c.json({ msg: "Error in input validation" });
+    return c.json({ msg: "Error in input validation", error: isValid.error });
   }
   const blog = isValid.data;
 
   const prisma = getPrisma(c.env.DATABASE_URL);
   const createBlog = await prisma.blog.create({
     data: {
+      coverImgUrl: blog.coverImgUrl || "",
       title: blog.title,
       content: blog.content,
       userId: c.get("userID"),
@@ -193,7 +198,7 @@ app.put("/api/v1/blog", authMiddleware, async (c) => {
   return c.json({ msg: "updated successfully", updatedBlog }, 200);
 });
 app.delete("/api/v1/blog", authMiddleware, async (c) => {
-  const { title, content, id } = await c.req.json();
+  const { id } = await c.req.json();
   const prisma = getPrisma(c.env.DATABASE_URL);
   const blogExist = await prisma.blog.findFirst({
     where: {
@@ -238,6 +243,8 @@ app.get("/api/v1/blogs", async (c) => {
         {
           id: true,
           username: true,
+          userAvatarUrl: true,
+
         }
       }
     }

@@ -14,22 +14,24 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  username  String
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  blogs     Blog[]
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String
+  password      String
+  userAvatarUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  blogs         Blog[]
 }
 
 model Blog {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  published Boolean  @default(false)
-  user      User?    @relation(fields: [userId], references: [id])
-  userId    String?
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  coverImgUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  published   Boolean  @default(false)
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
 }
