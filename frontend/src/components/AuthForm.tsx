@@ -3,8 +3,10 @@ import { signupType } from "@sujansince2003/blogifycommon";
 import type { ChangeEvent } from "react";
 import { useState } from "react";
 import API from "../axiosInstance";
+import { useUser } from "../context/UserContext";
 
 const AuthForm = ({ type }: { type: "login" | "signup" }) => {
+  const { setUser } = useUser();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<signupType>({
     username: "",
@@ -23,6 +25,7 @@ const AuthForm = ({ type }: { type: "login" | "signup" }) => {
       const apiData = await res.data;
       const token = apiData.token;
       localStorage.setItem("token", token);
+      setUser(apiData.user);
       setLoading(false);
       navigate("/blogs");
     } catch (error) {
