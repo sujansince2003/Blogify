@@ -10,11 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sujansince2003/blogifycommon": "^1.0.0",
+    "@sujansince2003/blogifycommon": "^1.2.3",
     "@tailwindcss/vite": "^4.0.9",
     "axios": "^1.8.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-icons": "^5.5.0",
     "react-router-dom": "^7.2.0",
     "tailwindcss": "^4.0.9"
   },
