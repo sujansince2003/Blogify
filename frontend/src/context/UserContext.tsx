@@ -45,7 +45,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     fetchUser();
-  }, []);
+  }, [user]);
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
