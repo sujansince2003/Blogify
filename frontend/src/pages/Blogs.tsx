@@ -1,5 +1,5 @@
 import API from "../axiosInstance";
-import { BlogCard, Navbar } from "../components";
+import { BlogCard, Navbar, Loading } from "../components";
 import { useEffect, useState } from "react";
 import { blogType } from "@sujansince2003/blogifycommon";
 
@@ -26,14 +26,13 @@ const Blogs = () => {
     }
     fetchBlogs();
   }, []);
-  console.log(blogs);
 
   return (
     <>
       <Navbar />
       <div className=" mx-auto max-w-3xl my-20">
         {loading ? (
-          <p>Loading...</p>
+          <Loading />
         ) : (
           <>
             {blogs.length === 0 && <p>No blogs found</p>}
@@ -41,10 +40,13 @@ const Blogs = () => {
               {blogs.map((blog: blogType, index) => (
                 <>
                   <BlogCard
-                    key={blog.title}
+                    id={blog.id}
+                    key={blog.id}
                     title={blog.title}
                     content={blog.content}
                     createdAt={blog.createdAt}
+                    blogCover={blog.coverImgUrl}
+                    user={blog.user}
                   />
                   {index !== blogs.length - 1 && (
                     <hr className="border-gray-300 w-2xl my-2" />
