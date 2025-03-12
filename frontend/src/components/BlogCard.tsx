@@ -6,7 +6,7 @@ import { FaFacebook } from "react-icons/fa";
 import { RiTwitterXLine } from "react-icons/ri";
 import { MdContentCopy } from "react-icons/md";
 import { Link } from "react-router-dom";
-
+import DOMPurify from "dompurify";
 interface BlogCardProps {
   id: string;
   title: string;
@@ -77,7 +77,11 @@ const BlogCard = ({
             {/* title */}
             <h1 className="font-bitter font-bold text-2xl ">{title}</h1>
             <p className="font-bitter text-base line-clamp-2 text-ellipsis ">
-              {content}
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(content),
+                }}
+              />
             </p>
           </div>
           {/* footer div ,ta time to read,bookmark,share,option  */}
@@ -135,13 +139,15 @@ const BlogCard = ({
           </div>
         </div>
         <div>
-          <img
-            className="rounded-md object-contain"
-            width={160}
-            height={107}
-            src={blogCover}
-            alt=""
-          />
+          {blogCover && (
+            <img
+              className="rounded-md object-contain"
+              width={160}
+              height={107}
+              src={blogCover}
+              alt="Blog Cover Image"
+            />
+          )}
         </div>
       </div>
     </Link>
