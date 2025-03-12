@@ -28,6 +28,7 @@ export const blogBodySchema = z.object({
 
 
 export const userSchema = z.object({
+
     username: z.string(),
     userAvatarUrl: z.string(),
 });
