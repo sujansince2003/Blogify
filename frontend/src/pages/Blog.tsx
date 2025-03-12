@@ -11,6 +11,8 @@ import { IoShareOutline } from "react-icons/io5";
 import { FaFacebook } from "react-icons/fa";
 import { RiTwitterXLine } from "react-icons/ri";
 import { MdContentCopy } from "react-icons/md";
+import DOMPurify from "dompurify";
+
 const Blog = () => {
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -153,7 +155,11 @@ const Blog = () => {
               <hr className="border-gray-300 w-3xl my-2 " />
 
               <p className="font-bitter text-gray-900 text-xl ">
-                {blogData?.content}
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(blogData?.content ?? ""),
+                  }}
+                />
               </p>
             </div>
           </div>
