@@ -9,12 +9,14 @@ import { IoBookmark } from "react-icons/io5";
 import { useState } from "react";
 import { useUser } from "../context/UserContext";
 import { Link } from "react-router-dom";
+import { useBlogs } from "../context/BlogContext";
 
 const Navbar = () => {
   const [viewBookmark, setViewBookmark] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
   const { user, isLoggedIn, logout } = useUser();
-  console.log(user);
+  const { searchQuery, setSearchQuery } = useBlogs();
+
   return (
     <div>
       {/* left */}
@@ -29,6 +31,8 @@ const Navbar = () => {
               placeholder="Search"
               type="text"
               className="font-bitter text-base focus-within:outline-none"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
