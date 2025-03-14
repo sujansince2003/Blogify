@@ -267,4 +267,40 @@ app.get("/api/v1/blogs", async (c) => {
   return c.json({ msg: "fetched all blogs", blogs });
 });
 
+
+
+app.get("/api/v1/search", async (c) => {
+  const prisma = getPrisma(c.env.DATABASE_URL);
+  try {
+    const query = c.req.query("query")
+    const blogs = await prisma.blog.findMany({
+      where: {
+        OR: [
+          { content: { search: query } },
+          { title: { search: query } }
+        ]
+
+      }, include:
+      {
+        user:
+        {
+          select:
+          {
+            id: true,
+            userAvatarUrl: true,
+            username: true
+          }
+        }
+      }
+    })
+    return c.json({ msg: "fetched all blogs", blogs });
+
+  } catch (error) {
+    return c.json({ msg: "failed to  fetch blogs", blogs: [] });
+  }
+
+})
+
+
+
 export default app;
