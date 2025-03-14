@@ -1,37 +1,16 @@
-import API from "../axiosInstance";
 import { BlogCard, Navbar, Loading } from "../components";
-import { useEffect, useState } from "react";
+
 import { blogType } from "@sujansince2003/blogifycommon";
+import { useBlogs } from "../context/BlogContext";
 
 const Blogs = () => {
-  const [blogs, setBlogs] = useState<blogType[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    async function fetchBlogs() {
-      setLoading(true);
-      try {
-        const blogsData = await API.get("blogs", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setBlogs(blogsData.data.blogs);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching blogs:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchBlogs();
-  }, []);
+  const { blogs, isLoading } = useBlogs();
 
   return (
     <>
       <Navbar />
       <div className=" mx-auto max-w-3xl my-20">
-        {loading ? (
+        {isLoading ? (
           <Loading />
         ) : (
           <>
